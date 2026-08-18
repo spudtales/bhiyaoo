@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>a secret for you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   EDIT ME — search "CONFIG" in the <script> at the bottom
+   to change names, the password, and the final prom details.
+
+   DROP-IN PHOTOS (optional, for full realism) — place these
+   files next to index.html and they'll be used automatically:
+     stage.jpg            chapter 1 — concert stage
+     taxi.jpg             chapter 3 — taxi
+     waterfall.jpg        chapter 3 — waterfall
+     christmas-room.jpg   chapter 5 — decorated room
+   Without them, a designed fallback scene is shown instead.
+   (star-bg-a.jpg / star-bg-b.jpg are already included and used
+   as the default alternating page background behind every chapter.)
+
+   CUSTOM PAGE BACKGROUNDS — to set your own background photo for
+   any chapter, go to CONFIG.backgrounds in the <script> below and
+   put a filename against that chapter's number, e.g. 0: "bg0.jpg".
+   Drop the matching file next to index.html. Any chapter left as
+   null keeps the default alternating star background.
+   ============================================================ */
+:root{
+  --charcoal:#15110d; --charcoal-2:#1f1912; --panel:#241d15;
+  --gold:#c9a86a; --gold-light:#e8c987; --gold-dim:#8a7047;
+  --cream:#f2ead9; --cream-dim:#c9bfa8; --wine:#6b1a2e; --wine-light:#8f2c42;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; min-height:100%; background:var(--charcoal); color:var(--cream);
+  font-family:'Cormorant Garamond',serif; overflow-x:hidden; }
+@media (prefers-reduced-motion: reduce){ *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; } }
+
+#ambient{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%, #241d15 0%, #15110d 70%);
+  background-size:cover; background-position:center; transition:background-image .6s ease; }
+#ambient.bg-a{ background-image:
+    linear-gradient(rgba(21,17,13,.82), rgba(21,17,13,.88)), url('star-bg-a.jpg'); }
+#ambient.bg-b{ background-image:
+    linear-gradient(rgba(21,17,13,.65), rgba(21,17,13,.8)), url('star-bg-b.jpg'); }
+.spark{ position:absolute; width:3px; height:3px; border-radius:50%; background:var(--gold-light);
+  box-shadow:0 0 6px 1px var(--gold-light); animation:twinkle-s 3s ease-in-out infinite; opacity:0; }
+@keyframes twinkle-s{ 0%,100%{opacity:0;} 50%{opacity:.8;} }
+
+#progressWrap{ position:fixed; top:0; left:0; right:0; height:3px; background:rgba(201,168,106,.12); z-index:5; }
+#progressBar{ height:100%; width:0%; background:linear-gradient(90deg, var(--gold-dim), var(--gold-light)); transition:width .5s ease; }
+
+#stage{ position:relative; z-index:2; min-height:100dvh; width:100%;
+  display:flex; align-items:center; justify-content:center; padding:5vh 4vw; }
+
+.scene{ display:none; width:92vw; max-width:1500px; text-align:center; animation:rise .8s ease; }
+.scene.active{ display:block; }
+@keyframes rise{ from{opacity:0; transform:translateY(16px);} to{opacity:1; transform:translateY(0);} }
+
+.eyebrow{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.05rem; letter-spacing:.1em;
+  color:var(--gold); margin-bottom:10px; text-transform:uppercase; }
+h1{ font-family:'Playfair Display',serif; font-weight:700; font-size:clamp(1.9rem,4vw,3.1rem); line-height:1.25; margin:0 0 14px 0; color:var(--cream); }
+p.body-text{ font-size:1.25rem; line-height:1.6; color:var(--cream-dim); margin:0 0 26px 0; }
+
+.btn{ font-family:'Cormorant Garamond',serif; font-weight:600; font-size:1.15rem; letter-spacing:.04em; color:#fff;
+  background:linear-gradient(135deg, #d9485c, #a8203a); border:none; border-radius:4px; padding:14px 36px; cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease; box-shadow:0 8px 22px rgba(0,0,0,.4); }
+.btn:hover{ transform:translateY(-2px); box-shadow:0 12px 26px rgba(0,0,0,.5); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; }
+.btn:focus-visible{ outline:2px solid #d9485c; outline-offset:3px; }
+.btn.secondary{ background:transparent; color:var(--cream); border:1px solid #a8203a; box-shadow:none; }
+.btn.secondary:hover{ background:rgba(168,32,58,.12); }
+.choices{ display:flex; gap:18px; justify-content:center; flex-wrap:wrap; }
+
+input[type=text]{ font-family:'Cormorant Garamond',serif; font-size:1.2rem; padding:13px 18px; border-radius:2px;
+  border:1px solid var(--gold-dim); background:rgba(255,255,255,.04); color:var(--cream); width:100%; max-width:420px; text-align:center; }
+input[type=text]::placeholder{ color:rgba(242,234,217,.35); }
+input[type=text]:focus{ outline:none; border-color:var(--gold-light); }
+.msg{ min-height:24px; font-size:1rem; color:var(--wine-light); margin-top:10px; font-style:italic; }
+.msg.ok{ color:#a8c98a; }
+
+/* ---------- Stage 1: concert (rose-arch stage backdrop) ---------- */
+.concert-wrap{ position:relative; padding:0; border-radius:6px; overflow:hidden; width:100%;
+  aspect-ratio:2.3/1; min-height:300px;
+  display:flex; flex-direction:column; justify-content:flex-end; align-items:center;
+  background:
+    repeating-radial-gradient(circle at 22% 18%, rgba(201,168,106,.09) 0 3px, transparent 4px 42px),
+    radial-gradient(ellipse at 50% 25%, #4a2f1c 0%, #2e1c11 65%),
+    linear-gradient(180deg, #3a2418 0%, #241609 100%);
+  background-size:cover; background-position:center;
+  border:1px solid rgba(201,168,106,.3); box-shadow:inset 0 0 140px rgba(0,0,0,.65); }
+.concert-wrap.has-photo .curtain, .concert-wrap.has-photo .rose, .concert-wrap.has-photo .leaf,
+.concert-wrap.has-photo .chandelier, .concert-wrap.has-photo .haze, .concert-wrap.has-photo .concert-floor{ display:none; }
+.concert-floor{ position:absolute; bottom:0; left:0; right:0; height:13%;
+  background:repeating-linear-gradient(90deg, #8a5a34 0 38px, #7a4c2a 38px 40px, #93613a 40px 42px);
+  box-shadow:0 -30px 50px rgba(0,0,0,.55) inset; }
+.curtain{ position:absolute; top:0; bottom:13%; width:15%; z-index:2;
+  background:repeating-linear-gradient(100deg, #5a1526 0 16px, #6b1a2e 16px 28px, #7a1f34 28px 32px);
+  box-shadow:inset -14px 0 40px rgba(0,0,0,.55); }
+.curtain.left{ left:0; border-radius:0 0 70% 0; }
+.curtain.right{ right:0; border-radius:0 0 0 70%; transform:scaleX(-1); }
+.chandelier{ position:absolute; top:1%; left:50%; transform:translateX(-50%); z-index:3; }
+.rose{ position:absolute; border-radius:50%; z-index:2;
+  background:radial-gradient(circle at 32% 28%, #c9455a, #7a1626 75%); box-shadow:0 2px 5px rgba(0,0,0,.4); }
+.leaf{ position:absolute; border-radius:0 70% 0 70%; background:linear-gradient(135deg,#3a5c34,#1e3820); z-index:1; }
+.haze{ position:absolute; inset:0; z-index:1; background:radial-gradient(ellipse at 50% 90%, rgba(107,26,46,.3), transparent 60%); }
+.spotlight{ position:absolute; top:-10%; width:220px; height:140%; opacity:.18; filter:blur(10px); z-index:2;
+  background:linear-gradient(180deg, rgba(232,201,135,.9), rgba(232,201,135,0)); transform-origin:top center; }
+.spotlight.s1{ left:14%; animation:sweep 6s ease-in-out infinite; }
+.spotlight.s2{ left:50%; animation:sweep 7s ease-in-out infinite reverse; }
+.spotlight.s3{ left:80%; animation:sweep 6.5s ease-in-out infinite; }
+@keyframes sweep{ 0%,100%{ transform:rotate(-13deg);} 50%{ transform:rotate(13deg);} }
+
+/* ---------- Stage 2: wheel of fortune ---------- */
+.tiles{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+.tile{ width:44px; height:54px; border-radius:3px; background:rgba(201,168,106,.06); border:1px solid var(--gold-dim);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.4rem; color:var(--gold-light); font-family:'Playfair Display',serif; }
+.keyboard{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:520px; margin:0 auto; }
+.key{ width:42px; height:44px; border-radius:3px; border:1px solid var(--gold-dim); background:var(--panel); color:var(--cream);
+  font-weight:700; cursor:pointer; font-family:'Cormorant Garamond',serif; font-size:1.05rem; }
+.key:hover:not(:disabled){ background:var(--gold-dim); color:var(--charcoal); }
+.key:disabled{ opacity:.3; cursor:default; }
+.key.hit{ background:var(--gold); color:var(--charcoal); border-color:var(--gold); }
+
+/* ---------- Stage 3: high five ---------- */
+.hf-scene{ position:relative; height:58vh; min-height:400px; border-radius:6px; overflow:hidden; margin-bottom:18px;
+  border:1px solid rgba(201,168,106,.3); background:linear-gradient(180deg,#1a2420,#0e1512); box-shadow:inset 0 0 100px rgba(0,0,0,.5); }
+.waterfall-layer{ position:absolute; top:0; left:6%; width:34%; height:100%;
+  background-image:url('waterfall.jpg'),
+    linear-gradient(180deg, #cfe9e6 0%, #8fb9b8 40%, #5c8482 100%);
+  background-size:cover; background-position:center; border-radius:4px; overflow:hidden; }
+.waterfall-mist{ position:absolute; bottom:0; left:6%; width:34%; height:26%;
+  background:radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.55), transparent 70%); filter:blur(6px); }
+.taxi-layer{ position:absolute; bottom:6%; right:6%; width:38%; max-width:340px; aspect-ratio:16/9;
+  background-image:url('taxi.jpg'),
+    linear-gradient(180deg, #f2c744 0%, #d9a916 60%, #a97f10 100%);
+  background-size:cover; background-position:center; border-radius:8px; box-shadow:0 14px 30px rgba(0,0,0,.5);
+  animation:drive 3.6s ease-in-out infinite; }
+@keyframes drive{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(-16px);} }
+.road{ position:absolute; bottom:0; left:0; right:0; height:14%; background:linear-gradient(180deg,#2a2a2a,#111); }
+.hand-target{ position:absolute; width:76px; height:76px; background:none; border:none; cursor:pointer;
+  filter:drop-shadow(0 0 12px rgba(232,201,135,.5)); transition:left .5s ease, top .5s ease; }
+.hf-counter{ font-size:1.1rem; color:var(--gold-light); margin-bottom:10px; font-style:italic; }
+
+/* ---------- Stage 4: puzzle ---------- */
+.puzzle-outer{ display:flex; justify-content:center; margin-bottom:16px; }
+.puzzle-wrap{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+  gap:3px; width:min(80vw,520px); aspect-ratio:1/1; border-radius:6px; overflow:hidden; border:1px solid var(--gold-dim);
+  background:var(--charcoal-2); box-shadow:0 20px 50px rgba(0,0,0,.5); }
+.piece{ width:100%; height:100%; cursor:pointer; background-image:url('swan.jpg'); background-repeat:no-repeat;
+  background-size:300% 300%; transition:filter .15s ease, transform .15s ease; }
+.piece.selected{ filter:brightness(1.3) saturate(1.2); transform:scale(.93); outline:2px solid var(--gold-light); outline-offset:-2px; }
+.puzzle-hint{ font-size:1.05rem; color:var(--gold-light); margin-bottom:16px; font-style:italic; }
+
+/* ---------- riddle image chapters (cage / kiss) ---------- */
+.riddle-frame{ position:relative; width:100%; max-width:640px; margin:0 auto 22px auto; border-radius:10px;
+  overflow:hidden; border:2px solid var(--gold-dim); box-shadow:0 20px 50px rgba(0,0,0,.5); background:#fff; }
+.riddle-frame img{ width:100%; display:block; }
+.puzzle-hint a{ color:var(--gold-light); }
+
+/* ---------- Stage 5: christmas room (hidden letters) ---------- */
+.xmas-scene{ position:relative; height:64vh; min-height:440px; border-radius:6px; overflow:hidden; margin-bottom:18px;
+  border:1px solid rgba(201,168,106,.3); box-shadow:inset 0 0 120px rgba(0,0,0,.6);
+  background-image:url('christmas-room.jpg'),
+    radial-gradient(ellipse at 30% 100%, #3a1c14 0%, transparent 55%),
+    linear-gradient(180deg, #241009 0%, #150a06 60%, #0d0705 100%);
+  background-size:cover; background-position:center; }
+.fireplace{ position:absolute; bottom:0; right:8%; width:22%; height:44%; background:linear-gradient(180deg,#8a4a2e,#5c3018);
+  border-radius:6px 6px 0 0; box-shadow:0 0 60px 10px rgba(255,140,60,.25); }
+.fireplace::before{ content:''; position:absolute; inset:12%; background:radial-gradient(ellipse at 50% 100%, #ffb347, #d9480f 60%, transparent 100%); border-radius:4px; filter:blur(2px); }
+.mantle{ position:absolute; bottom:44%; right:6%; width:26%; height:14px; background:linear-gradient(180deg,#c9a86a,#8a7047); }
+.stocking{ position:absolute; width:38px; height:60px; background:linear-gradient(180deg,#8f2c42,#6b1a2e);
+  border-radius:0 0 18px 18px; }
+.stocking::before{ content:''; position:absolute; top:-8px; left:0; right:0; height:12px; background:#f2ead9; border-radius:4px; }
+.tree{ position:absolute; bottom:2%; left:10%; }
+.tri{ width:0; height:0; border-left:80px solid transparent; border-right:80px solid transparent; margin:0 auto; }
+.tri1{ border-bottom:85px solid #1e4a30; margin-top:0; }
+.tri2{ border-left-width:96px; border-right-width:96px; border-bottom:100px solid #235c39; margin-top:-32px; }
+.tri3{ border-left-width:112px; border-right-width:112px; border-bottom:118px solid #276c42; margin-top:-38px; }
+.trunk{ width:28px; height:38px; background:#5b3a22; margin:0 auto; }
+.tree-star{ text-align:center; font-size:2rem; margin-bottom:-16px; filter:drop-shadow(0 0 10px var(--gold-light)); color:var(--gold-light); }
+.ornament{ position:absolute; width:14px; height:14px; border-radius:50%; box-shadow:0 0 8px 1px rgba(0,0,0,.3); }
+.lights-string{ position:absolute; top:6%; left:8%; right:8%; height:2px; }
+.gift{ position:absolute; bottom:2%; border-radius:3px; box-shadow:0 8px 16px rgba(0,0,0,.4); }
+.gift::before{ content:''; position:absolute; top:0; bottom:0; left:48%; width:8%; background:rgba(255,255,255,.7); }
+.gift::after{ content:''; position:absolute; left:0; right:0; top:48%; height:8%; background:rgba(255,255,255,.7); }
+.wreath{ position:absolute; top:4%; left:44%; width:90px; height:90px; border-radius:50%; border:16px solid #1e4a30;
+  box-shadow:0 0 20px rgba(0,0,0,.3); }
+.wreath::after{ content:''; position:absolute; bottom:-14px; left:50%; transform:translateX(-50%); width:0; height:0;
+  border-left:12px solid transparent; border-right:12px solid transparent; border-top:22px solid #8f2c42; }
+.love-letter{ position:absolute; width:30px; height:22px; background:none; padding:0; border-radius:2px;
+  border:none; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.5); transform-origin:center; z-index:6;
+  opacity:.4; transition:opacity .2s ease; }
+.love-letter:hover{ opacity:.6; }
+.love-letter.found{ opacity:0; pointer-events:none; transform:scale(1.4) rotate(20deg); transition:all .4s ease; }
+.xmas-counter{ font-size:1.1rem; color:var(--gold-light); margin-bottom:10px; font-style:italic; }
+
+/* ---------- Stage 6: the huge love letter / password ---------- */
+.letter-outer{ display:flex; justify-content:center; margin:10px 0 24px 0; }
+.love-letter-big{ position:relative; width:min(85vw,640px); min-height:56vh; padding:6vh 6vw;
+  background:linear-gradient(155deg, #f4ecd8 0%, #ecdfc0 55%, #e2d1a6 100%);
+  border-radius:2px; box-shadow:0 30px 70px rgba(0,0,0,.6), inset 0 0 60px rgba(139,105,20,.12);
+  color:#4a3418; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.love-letter-big::before{ content:''; position:absolute; inset:14px; border:1px solid rgba(139,105,20,.35); pointer-events:none; }
+.wax-seal{ width:64px; height:64px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #a8324a, #6b1a2e 70%);
+  box-shadow:0 6px 14px rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; margin-bottom:20px;
+  font-family:'Playfair Display',serif; color:var(--gold-light); font-size:1.4rem; }
+.love-letter-big h1{ color:#3a2610; }
+.love-letter-big .body-text{ color:#5c4527; }
+.love-letter-big input[type=text]{ border:none; border-bottom:2px solid #8b6914; background:transparent; color:#3a2610;
+  font-family:'Playfair Display',serif; font-style:italic; font-size:1.3rem; text-align:center; border-radius:0; max-width:480px; }
+.love-letter-big input[type=text]::placeholder{ color:rgba(74,52,24,.4); }
+.star-row{ display:flex; gap:26px; justify-content:center; margin:6px 0 20px 0; }
+.star-btn{ background:none; border:none; cursor:pointer; font-size:2.2rem; color:#8b6914;
+  animation:twinkle 2s ease-in-out infinite; }
+@keyframes twinkle{ 0%,100%{opacity:.5;} 50%{opacity:1;} }
+.revealed-clue{ min-height:32px; font-family:'Playfair Display',serif; font-style:italic; font-size:1.4rem; color:#3a2610; margin-bottom:6px; letter-spacing:.03em; }
+
+/* ---------- Stage 7: the ask + celebration ---------- */
+.envelope{ font-size:0; width:70px; height:52px; margin:0 auto 16px auto; position:relative; }
+.envelope .body{ position:absolute; inset:0; background:linear-gradient(135deg,#f2ead9,#e2d4b0); border-radius:3px; box-shadow:0 8px 18px rgba(0,0,0,.4); }
+.envelope .flap{ position:absolute; top:0; left:0; right:0; height:0; border-left:35px solid transparent; border-right:35px solid transparent; border-top:26px solid #d9c898; }
+.ask-box{ position:relative; min-height:180px; }
+.ask-buttons{ position:relative; display:flex; gap:24px; justify-content:center; align-items:center; height:100px; }
+#noBtn{ position:relative; transition:transform .18s ease, left .18s ease, top .18s ease; }
+.reveal{ display:none; }
+.reveal.active{ display:block; }
+.reveal h1{ font-size:clamp(2.2rem,6vw,3.6rem); }
+.details{ margin-top:22px; padding:20px 26px; border-radius:4px; background:rgba(201,168,106,.08);
+  border:1px solid rgba(201,168,106,.35); font-size:1.15rem; line-height:1.8; text-align:left; display:inline-block; }
+.details b{ color:var(--gold-light); }
+
+footer.hint{ position:fixed; bottom:14px; left:0; right:0; text-align:center; font-size:.85rem; font-style:italic;
+  color:rgba(201,168,106,.35); z-index:2; }
+</style>
+</head>
+<body>
+<div id="ambient" class="bg-a"></div>
+<div id="progressWrap"><div id="progressBar"></div></div>
+<div id="stage">
+
+  <!-- Scene 0: entry -->
+  <section class="scene active" data-scene="0">
+    <div class="eyebrow">Bhiyaaaooo</div>
+    <h1>I made you a little game.</h1>
+    <button class="btn" onclick="goTo(1)">Start</button>
+  </section>
+
+  <!-- Scene 1: concert / band guess (no text hints — the graphic + song ARE the clue) -->
+  <section class="scene" data-scene="1">
+    <div class="eyebrow">chapter one</div>
+    <h1>Who am I?</h1>
+    <div class="concert-wrap" id="concertWrap">
+      <div class="curtain left"></div><div class="curtain right"></div>
+      <div class="spotlight s1"></div><div class="spotlight s2"></div><div class="spotlight s3"></div>
+      <div class="haze"></div>
+      <svg class="chandelier" viewBox="0 0 140 90" width="140" height="90">
+        <line x1="70" y1="0" x2="70" y2="18" stroke="#c9a86a" stroke-width="2"/>
+        <ellipse cx="70" cy="26" rx="46" ry="8" fill="none" stroke="#c9a86a" stroke-width="2"/>
+        <g fill="#e8c987">
+          <circle cx="24" cy="30" r="4"/><circle cx="70" cy="36" r="5"/><circle cx="116" cy="30" r="4"/>
+          <circle cx="47" cy="32" r="3"/><circle cx="93" cy="32" r="3"/>
+        </g>
+        <g stroke="#8a7047" stroke-width="1.5">
+          <line x1="24" y1="30" x2="24" y2="46"/><line x1="47" y1="32" x2="47" y2="52"/>
+          <line x1="70" y1="36" x2="70" y2="58"/><line x1="93" y1="32" x2="93" y2="52"/>
+          <line x1="116" y1="30" x2="116" y2="46"/>
+        </g>
+      </svg>
+      <div class="concert-floor"></div>
+    </div>
+    <p class="body-text" style="margin-top:20px">Take a guess.</p>
+    <input type="text" id="bandGuess" placeholder="MY name, not theirs">
+    <div class="msg" id="bandMsg"></div>
+    <div style="margin-top:16px"><button class="btn" onclick="checkBand()">Guess</button></div>
+  </section>
+
+  <!-- Scene 2: wheel of fortune -->
+  <section class="scene" data-scene="2">
+    <div class="eyebrow">chapter two &middot; wheel of fortune</div>
+    <h1>What is sweet but is not sweet?</h1>
+    <div class="tiles" id="wofTiles"></div>
+    <div class="keyboard" id="wofKeyboard"></div>
+    <div class="msg" id="wofMsg"></div>
+    <div id="wofContinue" style="margin-top:20px; display:none"><button class="btn" onclick="goTo(3)">Continue</button></div>
+  </section>
+
+  <!-- Scene 3: high five -->
+  <section class="scene" data-scene="3">
+    <div class="eyebrow">chapter three</div>
+    <h1>Hi-five it before it disappears</h1>
+    <div class="hf-counter" id="hfCounter">0 / 5 high-fives</div>
+    <div class="hf-scene" id="hfScene">
+      <div class="road"></div>
+      <div class="waterfall-layer"></div>
+      <div class="waterfall-mist"></div>
+      <div class="taxi-layer"></div>
+    </div>
+    <p class="body-text">tap the hand quickly &mdash; it doesn't like to wait</p>
+  </section>
+
+  <!-- Scene 4: cage riddle -->
+  <section class="scene" data-scene="4">
+    <div class="eyebrow">chapter four</div>
+    <h1>If this is us, then who's inside the cage?</h1>
+    <div class="riddle-frame"><img src="cage.jpg" alt="cage riddle"></div>
+    <p class="body-text">Hint: think bonding over mutual hatred.</p>
+    <input type="text" id="cageGuess" placeholder="Your answer...">
+    <div class="msg" id="cageMsg"></div>
+    <div style="margin-top:16px"><button class="btn" onclick="checkCage()">Guess</button></div>
+  </section>
+
+  <!-- Scene 5: kiss riddle -->
+  <section class="scene" data-scene="5">
+    <div class="eyebrow">chapter five</div>
+    <h1>What flavour is this kiss?</h1>
+    <div class="riddle-frame"><img src="kiss.png" alt="kiss riddle"></div>
+    <input type="text" id="kissGuess" placeholder="Your answer...">
+    <div class="msg" id="kissMsg"></div>
+    <div style="margin-top:16px"><button class="btn" onclick="checkKiss()">Guess</button></div>
+  </section>
+
+  <!-- Scene 6: puzzle -->
+  <section class="scene" data-scene="6">
+    <div class="eyebrow">chapter six</div>
+    <h1>Piece it back together</h1>
+    <div class="puzzle-hint">tap two pieces to swap them &middot; <a href="#" onclick="setupPuzzle(); return false;">reset</a></div>
+    <div class="puzzle-outer"><div class="puzzle-wrap" id="puzzleWrap"></div></div>
+    <div class="msg" id="puzzleMsg"></div>
+  </section>
+
+  <!-- Scene 7: christmas room, hidden love letters -->
+  <section class="scene" data-scene="7">
+    <div class="eyebrow">chapter seven</div>
+    <h1>Find all 10 hidden letters</h1>
+    <div class="xmas-counter" id="xmasCounter">0 / 10 found</div>
+    <div class="xmas-scene" id="xmasScene"></div>
+    <div id="xmasContinue" style="display:none"><button class="btn" onclick="goTo(8)">Continue</button></div>
+  </section>
+
+  <!-- Scene 8: the huge love letter with password inside -->
+  <section class="scene" data-scene="8">
+    <div class="eyebrow">chapter eight</div>
+    <div class="letter-outer">
+      <div class="love-letter-big">
+        <div class="wax-seal">&#9825;</div>
+        <h1>This letter is locked</h1>
+        <p class="body-text">the password is hidden between the glittery stars</p>
+        <div class="star-row" id="starRow"></div>
+        <div class="revealed-clue" id="revealedClue"></div>
+        <input type="text" id="pwInput" placeholder="Enter the password...">
+        <div class="msg" id="pwMsg"></div>
+        <div style="margin-top:18px"><button class="btn" onclick="checkPassword()">Unlock</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scene 9: the letter has opened -->
+  <section class="scene" data-scene="9">
+    <div class="envelope"><div class="body"></div><div class="flap"></div></div>
+    <div class="eyebrow">the letter is open</div>
+    <h1>Congratulations!</h1>
+    <button class="btn" onclick="goTo(10)">Click here to read it</button>
+  </section>
+
+  <!-- Scene 10: the ask + celebration -->
+  <section class="scene" data-scene="10">
+    <div class="ask-box" id="askBox">
+      <h1>Will you go to prom with me?</h1>
+      <div class="ask-buttons">
+        <button class="btn" onclick="sayYes()">Yes</button>
+        <button class="btn secondary" id="noBtn" onmouseenter="dodge()" onclick="dodge()">No</button>
+      </div>
+    </div>
+    <div class="reveal" id="revealBox">
+      <div class="eyebrow">She said</div>
+      <h1 id="revealHeading">YES!</h1>
+      <div class="details" id="detailsBox"></div>
+    </div>
+  </section>
+
+</div>
+<footer class="hint">made with a lot of overthinking and one (1) origami swan</footer>
+
+<script>
+/* ============================================================
+   CONFIG — edit these to make it yours
+   ============================================================ */
+const CONFIG = {
+  bandAnswers: ["dealer", "a dealer"],
+  wofAnswer: "SOOTFENI",
+  cageAnswer: "KC",
+  kissAnswer: "VICKS",
+  password: "PRASHASTE HAS HAPPENED",
+  passwordParts: ["PRASHASTE", "HAS", "HAPPENED"],
+  promDate: "Saturday, Aug 22nd",
+  promTime: "6:00 PM",
+  promLocation: "Mayfield Estates, Kharadi",
+  totalScenes: 11,
+  /* CUSTOM BACKGROUNDS — one entry per chapter (0 = landing, 10 = the ask).
+     Put a filename to use that photo as the page background for that
+     chapter (drop the file in next to index.html). Leave as null to use
+     the default alternating star backgrounds. Example:
+       0: "bg-landing.jpg",
+       1: null,   // falls back to the default star background
+  */
+  backgrounds: {
+    0: null,   // landing
+    1: null,   // guess the band
+    2: null,   // wheel of fortune
+    3: null,   // hi-five
+    4: null,   // cage riddle
+    5: null,   // kiss riddle
+    6: null,   // puzzle
+    7: null,   // christmas letters
+    8: null,   // password letter
+    9: null,   // "congratulations"
+    10: null   // the ask
+  }
+};
+
+document.getElementById('detailsBox').innerHTML =
+  `<b>Date:</b> ${CONFIG.promDate}<br><b>Time:</b> ${CONFIG.promTime}<br><b>Where:</b> ${CONFIG.promLocation}<br><br>See you at the dance!`;
+
+/* ============================================================
+   Scene navigation + progress bar
+   ============================================================ */
+let currentScene = 0;
+function goTo(n){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  document.querySelector(`.scene[data-scene="${n}"]`).classList.add('active');
+  currentScene = n;
+  document.getElementById('progressBar').style.width = (n / (CONFIG.totalScenes-1) * 100) + '%';
+  setAmbientBackground(n);
+  window.scrollTo(0,0);
+  if(n===2) setupWheelOfFortune();
+  if(n===3) setupHighFive();
+  if(n===6) setupPuzzle();
+  if(n===7) setupXmas();
+  if(n===8) setupStars();
+  if(n===10) setupAsk();
+}
+
+/* ============================================================
+   Ambient background per chapter — uses CONFIG.backgrounds[n] if
+   set and the file actually loads; otherwise falls back to the
+   default alternating star backgrounds.
+   ============================================================ */
+const bgLoadCache = {};
+function setAmbientBackground(n){
+  const ambientEl = document.getElementById('ambient');
+  const custom = CONFIG.backgrounds && CONFIG.backgrounds[n];
+  const useDefault = () => {
+    ambientEl.style.backgroundImage = '';
+    ambientEl.classList.toggle('bg-a', n % 2 === 0);
+    ambientEl.classList.toggle('bg-b', n % 2 === 1);
+  };
+  if(!custom){ useDefault(); return; }
+  if(bgLoadCache[custom] === 'ok'){
+    ambientEl.classList.remove('bg-a','bg-b');
+    ambientEl.style.backgroundImage =
+      `linear-gradient(rgba(21,17,13,.72), rgba(21,17,13,.82)), url('${custom}')`;
+    return;
+  }
+  if(bgLoadCache[custom] === 'fail'){ useDefault(); return; }
+  const img = new Image();
+  img.onload = () => {
+    bgLoadCache[custom] = 'ok';
+    if(currentScene === n){
+      ambientEl.classList.remove('bg-a','bg-b');
+      ambientEl.style.backgroundImage =
+        `linear-gradient(rgba(21,17,13,.72), rgba(21,17,13,.82)), url('${custom}')`;
+    }
+  };
+  img.onerror = () => { bgLoadCache[custom] = 'fail'; if(currentScene === n) useDefault(); };
+  img.src = custom;
+  useDefault(); // show default immediately while the custom photo loads
+}
+
+/* ---------- Stage 1: band guess ---------- */
+function checkBand(){
+  const val = document.getElementById('bandGuess').value.trim().toLowerCase();
+  const msg = document.getElementById('bandMsg');
+  if(CONFIG.bandAnswers.includes(val)){
+    msg.textContent = "That's the one."; msg.classList.add('ok');
+    setTimeout(()=>goTo(2), 700);
+  } else {
+    msg.textContent = "Not quite — think again.";
+    msg.classList.remove('ok');
+  }
+}
+
+/* ---------- Stage 4: cage riddle ---------- */
+function checkCage(){
+  const val = document.getElementById('cageGuess').value.trim().toUpperCase();
+  const msg = document.getElementById('cageMsg');
+  if(val === CONFIG.cageAnswer){
+    msg.textContent = "That's the one."; msg.classList.add('ok');
+    setTimeout(()=>goTo(5), 700);
+  } else {
+    msg.textContent = "Not quite — think bonding over mutual hatred.";
+    msg.classList.remove('ok');
+  }
+}
+
+/* ---------- Stage 5: kiss riddle ---------- */
+function checkKiss(){
+  const val = document.getElementById('kissGuess').value.trim().toUpperCase();
+  const msg = document.getElementById('kissMsg');
+  if(val === CONFIG.kissAnswer){
+    msg.textContent = "That's the one."; msg.classList.add('ok');
+    setTimeout(()=>goTo(6), 700);
+  } else {
+    msg.textContent = "Not quite — try again.";
+    msg.classList.remove('ok');
+  }
+}
+
+/* ---------- Stage 2: wheel of fortune ---------- */
+let wofRevealed = [];
+function setupWheelOfFortune(){
+  const answer = CONFIG.wofAnswer;
+  wofRevealed = new Array(answer.length).fill(false);
+  renderWofTiles();
+  const kb = document.getElementById('wofKeyboard');
+  kb.innerHTML = '';
+  document.getElementById('wofMsg').textContent = '';
+  document.getElementById('wofContinue').style.display = 'none';
+  for(let c=65;c<=90;c++){
+    const letter = String.fromCharCode(c);
+    const btn = document.createElement('button');
+    btn.className = 'key'; btn.textContent = letter;
+    btn.onclick = () => guessLetter(letter, btn);
+    kb.appendChild(btn);
+  }
+}
+function renderWofTiles(){
+  const answer = CONFIG.wofAnswer;
+  const tiles = document.getElementById('wofTiles');
+  tiles.innerHTML = '';
+  for(let i=0;i<answer.length;i++){
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.textContent = wofRevealed[i] ? answer[i] : '';
+    tiles.appendChild(t);
+  }
+}
+function guessLetter(letter, btn){
+  btn.disabled = true;
+  const answer = CONFIG.wofAnswer;
+  let found = false;
+  for(let i=0;i<answer.length;i++){
+    if(answer[i]===letter){ wofRevealed[i]=true; found=true; }
+  }
+  if(found) btn.classList.add('hit');
+  renderWofTiles();
+  if(wofRevealed.every(Boolean)){
+    document.getElementById('wofMsg').textContent = "You got it.";
+    document.getElementById('wofMsg').classList.add('ok');
+    document.getElementById('wofContinue').style.display = 'block';
+    document.querySelectorAll('#wofKeyboard .key').forEach(k=>k.disabled=true);
+  }
+}
+
+/* ---------- Stage 3: high five ---------- */
+let hfCount = 0, hfTimer = null;
+function setupHighFive(){
+  hfCount = 0;
+  document.getElementById('hfCounter').textContent = '0 / 5 high-fives';
+  const scene = document.getElementById('hfScene');
+  document.querySelectorAll('.hand-target').forEach(h=>h.remove());
+  const hand = document.createElement('button');
+  hand.className = 'hand-target';
+  hand.innerHTML = '<svg viewBox="0 0 100 100" width="100%" height="100%"><g fill="#e8c987"><path d="M35 95 Q20 90 18 70 L16 40 Q16 34 22 34 Q28 34 28 40 L28 58 L30 20 Q30 13 37 13 Q44 13 44 20 L44 55 L45 12 Q45 5 52 5 Q59 5 59 12 L59 55 L61 18 Q61 11 68 11 Q75 11 75 18 L75 58 Q82 56 84 64 L86 78 Q86 95 68 97 Z"/></g></svg>';
+  hand.onclick = () => {
+    hfCount++;
+    document.getElementById('hfCounter').textContent = `${hfCount} / 5 high-fives`;
+    if(hfCount>=5){
+      clearInterval(hfTimer);
+      hand.remove();
+      setTimeout(()=>goTo(4), 500);
+      return;
+    }
+    moveHand(hand, scene);
+  };
+  scene.appendChild(hand);
+  moveHand(hand, scene);
+  clearInterval(hfTimer);
+  hfTimer = setInterval(()=>{ if(document.body.contains(hand)) moveHand(hand, scene); }, 1300);
+}
+function moveHand(hand, scene){
+  const w = scene.clientWidth || 600, h = scene.clientHeight || 400;
+  hand.style.left = Math.random()*(w-200) + 100 + 'px';
+  hand.style.top = Math.random()*(h-140) + 20 + 'px';
+}
+
+/* ---------- Stage 4: puzzle (robust grid + percentage backgrounds) ---------- */
+const PUZZLE_SIZE = 3;
+let puzzleOrder = [];
+let puzzleSelected = null;
+function setupPuzzle(){
+  const total = PUZZLE_SIZE*PUZZLE_SIZE;
+  puzzleOrder = [...Array(total).keys()];
+  do { shuffle(puzzleOrder); } while(puzzleOrder.every((v,i)=>v===i));
+  puzzleSelected = null;
+  document.getElementById('puzzleMsg').textContent = '';
+  renderPuzzle();
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+}
+function renderPuzzle(){
+  const wrap = document.getElementById('puzzleWrap');
+  wrap.innerHTML = '';
+  puzzleOrder.forEach((pieceIdx, slotIdx) => {
+    const col = pieceIdx % PUZZLE_SIZE, row = Math.floor(pieceIdx/PUZZLE_SIZE);
+    const posX = (col/(PUZZLE_SIZE-1))*100;
+    const posY = (row/(PUZZLE_SIZE-1))*100;
+    const div = document.createElement('div');
+    div.className = 'piece';
+    div.style.backgroundPosition = `${posX}% ${posY}%`;
+    div.onclick = () => onPieceClick(slotIdx, div);
+    wrap.appendChild(div);
+  });
+}
+function onPieceClick(slotIdx, el){
+  if(puzzleSelected === null){
+    puzzleSelected = { slotIdx, el };
+    el.classList.add('selected');
+    return;
+  }
+  if(puzzleSelected.slotIdx === slotIdx){
+    puzzleSelected.el.classList.remove('selected');
+    puzzleSelected = null;
+    return;
+  }
+  const a = puzzleSelected.slotIdx, b = slotIdx;
+  [puzzleOrder[a], puzzleOrder[b]] = [puzzleOrder[b], puzzleOrder[a]];
+  puzzleSelected = null;
+  renderPuzzle();
+  if(puzzleOrder.every((v,i)=>v===i)){
+    document.getElementById('puzzleMsg').textContent = 'The swan is whole again.';
+    document.getElementById('puzzleMsg').classList.add('ok');
+    setTimeout(()=>goTo(7), 900);
+  }
+}
+
+/* ---------- Stage 5: christmas room — decor + 10 hidden love letters ---------- */
+function setupXmas(){
+  const scene = document.getElementById('xmasScene');
+  document.querySelectorAll('.love-letter').forEach(el=>el.remove());
+  xmasFound = new Set();
+  document.getElementById('xmasCounter').textContent = '0 / 10 found';
+  document.getElementById('xmasContinue').style.display = 'none';
+
+  // 10 hidden love letters, scattered across the scene
+  const spots = [
+    [8,30, -12],[20,72, 15],[30,80, -8],[12,55, 20],[40,50, -18],
+    [64,45, 10],[72,30, -15],[78,68, 8],[90,20, -10],[50,15, 5]
+  ];
+  spots.forEach((s,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'love-letter';
+    btn.style.left = s[0]+'%'; btn.style.top = s[1]+'%';
+    btn.style.transform = `rotate(${s[2]}deg)`;
+    btn.setAttribute('aria-label','find the hidden letter');
+    btn.innerHTML = `<svg viewBox="0 0 30 22" width="100%" height="100%" style="display:block">
+      <rect x="0" y="0" width="30" height="22" rx="2" fill="#faf7f0"/>
+      <path d="M1 1 L15 13 L29 1" fill="none" stroke="rgba(60,40,20,.28)" stroke-width="1.3"/>
+      <g transform="translate(15,5)">
+        <path d="M0 0 L-7 -4.5 L-7 4.5 Z" fill="#c9283a"/>
+        <path d="M0 0 L7 -4.5 L7 4.5 Z" fill="#c9283a"/>
+        <circle r="2.2" fill="#8f1622"/>
+      </g>
+    </svg>`;
+    btn.onclick = () => {
+      if(xmasFound.has(i)) return;
+      xmasFound.add(i);
+      btn.classList.add('found');
+      document.getElementById('xmasCounter').textContent = `${xmasFound.size} / 10 found`;
+      if(xmasFound.size>=10) document.getElementById('xmasContinue').style.display = 'block';
+    };
+    scene.appendChild(btn);
+  });
+}
+let xmasFound = new Set();
+
+/* ---------- Stage 6: password inside the big love letter ---------- */
+let starsClicked = new Set();
+function setupStars(){
+  starsClicked = new Set();
+  document.getElementById('revealedClue').textContent = '';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwMsg').textContent = '';
+  const row = document.getElementById('starRow');
+  row.innerHTML = '';
+  CONFIG.passwordParts.forEach((word, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'star-btn';
+    btn.textContent = '\u2726';
+    btn.style.animationDelay = (i*0.3)+'s';
+    btn.onclick = () => {
+      if(starsClicked.has(i)) return;
+      starsClicked.add(i);
+      updateRevealedClue();
+    };
+    row.appendChild(btn);
+  });
+}
+function updateRevealedClue(){
+  const parts = CONFIG.passwordParts.map((w,i)=> starsClicked.has(i) ? w : '\u2022 \u2022 \u2022');
+  document.getElementById('revealedClue').textContent = parts.join('  ');
+}
+function checkPassword(){
+  const val = document.getElementById('pwInput').value.trim().toUpperCase().replace(/\s+/g,' ');
+  const msg = document.getElementById('pwMsg');
+  if(val === CONFIG.password){
+    msg.textContent = 'Unlocked.'; msg.classList.add('ok');
+    setTimeout(()=>goTo(9), 700);
+  } else {
+    msg.textContent = 'Not quite — look between the stars again.';
+    msg.classList.remove('ok');
+  }
+}
+
+/* ---------- Stage 7: final ask + celebration ---------- */
+function setupAsk(){
+  document.getElementById('askBox').style.display = 'block';
+  document.getElementById('revealBox').classList.remove('active');
+}
+function dodge(){
+  const box = document.getElementById('askBox');
+  const btn = document.getElementById('noBtn');
+  const rect = box.getBoundingClientRect();
+  const maxX = Math.max(rect.width-90,60), maxY = 40;
+  btn.style.position = 'relative';
+  btn.style.left = ((Math.random()-0.5)*maxX)+'px';
+  btn.style.top = ((Math.random()-0.5)*maxY)+'px';
+}
+function sayYes(){
+  document.getElementById('askBox').style.display = 'none';
+  document.getElementById('revealBox').classList.add('active');
+  launchCelebration();
+}
+
+/* ============================================================
+   Ambient background: gold sparks
+   ============================================================ */
+const ambient = document.getElementById('ambient');
+for(let i=0;i<40;i++){
+  const s = document.createElement('div');
+  s.className = 'spark';
+  s.style.left = Math.random()*100+'%'; s.style.top = Math.random()*100+'%';
+  s.style.animationDuration = (2+Math.random()*3)+'s';
+  s.style.animationDelay = (Math.random()*4)+'s';
+  ambient.appendChild(s);
+}
+
+/* ============================================================
+   Rose garland arch for the concert stage backdrop
+   ============================================================ */
+function buildRoseGarland(){
+  const wrap = document.getElementById('concertWrap');
+  if(!wrap || wrap.dataset.roses) return;
+  wrap.dataset.roses = '1';
+  const rose = (xPct,yPct,size,z) => {
+    const r = document.createElement('div');
+    r.className = 'rose';
+    r.style.left = xPct+'%'; r.style.top = yPct+'%';
+    r.style.width = size+'px'; r.style.height = size+'px';
+    r.style.zIndex = z || 2;
+    wrap.appendChild(r);
+  };
+  const leaf = (xPct,yPct,size,rot) => {
+    const l = document.createElement('div');
+    l.className = 'leaf';
+    l.style.left = xPct+'%'; l.style.top = yPct+'%';
+    l.style.width = size+'px'; l.style.height = size*0.55+'px';
+    l.style.transform = `rotate(${rot}deg)`;
+    wrap.appendChild(l);
+  };
+  // top arch — roses along a shallow curve across the top
+  const archCount = 22;
+  for(let i=0;i<archCount;i++){
+    const t = i/(archCount-1);
+    const x = 6 + t*88;
+    const y = 1 + Math.sin(t*Math.PI)*-1 + (1-Math.sin(t*Math.PI))*6;
+    const size = 20 + Math.random()*14;
+    rose(x, y, size, 3);
+    if(i%2===0) leaf(x-1.5, y+2, size*0.8, Math.random()*360);
+  }
+  // cascading clusters down each side
+  [ {side:0, base:2}, {side:1, base:86} ].forEach(cfg=>{
+    for(let i=0;i<10;i++){
+      const x = cfg.base + (Math.random()*8-4) + (cfg.side===0? i*0.4 : -i*0.4);
+      const y = 4 + i*9 + Math.random()*4;
+      const size = 18 + Math.random()*16;
+      rose(x, y, size, 2);
+      if(i%2===0) leaf(x+3, y+3, size*0.75, Math.random()*360);
+    }
+  });
+  // bottom corner bouquets near the floor
+  [ {x:1,y:74},{x:6,y:80},{x:2,y:86},{x:92,y:74},{x:87,y:80},{x:93,y:86} ].forEach(p=>{
+    rose(p.x, p.y, 26+Math.random()*14, 2);
+    leaf(p.x+3, p.y+4, 22, Math.random()*360);
+  });
+}
+buildRoseGarland();
+
+/* If a real stage.jpg is dropped in next to this file, use it and
+   hide the illustrated curtains/roses so they don't double up. */
+(function tryStagePhoto(){
+  const img = new Image();
+  img.onload = () => {
+    const wrap = document.getElementById('concertWrap');
+    wrap.style.backgroundImage =
+      `linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.3)), url('stage.jpg')`;
+    wrap.classList.add('has-photo');
+  };
+  img.src = 'stage.jpg';
+})();
+
+/* ============================================================
+   Celebration: confetti + ribbons + firework bursts (no libraries)
+   ============================================================ */
+function launchCelebration(){
+  const W = window.innerWidth, H = window.innerHeight;
+  const cv = document.createElement('canvas');
+  cv.style.position='fixed'; cv.style.inset='0'; cv.style.zIndex='5'; cv.style.pointerEvents='none';
+  cv.width=W; cv.height=H; document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  const colors = ['#a8324a','#8f2c42','#6b1a2e','#d94f61','#c9455a'];
+
+  const confetti = [];
+  for(let i=0;i<110;i++){
+    confetti.push({x:Math.random()*W,y:-20-Math.random()*H*0.4,w:7+Math.random()*5,h:9+Math.random()*6,
+      color:colors[Math.floor(Math.random()*colors.length)],vy:2+Math.random()*3,vx:(Math.random()-0.5)*2,
+      rot:Math.random()*360,vr:(Math.random()-0.5)*10});
+  }
+  const ribbons = [];
+  for(let i=0;i<26;i++){
+    ribbons.push({x:Math.random()*W,y:-40-Math.random()*H*0.3,len:60+Math.random()*70,
+      color:colors[Math.floor(Math.random()*colors.length)],vy:1.5+Math.random()*2,vx:(Math.random()-0.5)*1.5,
+      rot:Math.random()*360,vr:(Math.random()-0.5)*6,wob:Math.random()*Math.PI*2});
+  }
+  const fireworks = [];
+  function spawnFirework(){
+    const fx = W*0.2+Math.random()*W*0.6, fy = H*0.15+Math.random()*H*0.35;
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    const sparks = [];
+    const n = 34;
+    for(let i=0;i<n;i++){
+      const ang = (i/n)*Math.PI*2;
+      const speed = 2.5+Math.random()*2;
+      sparks.push({x:fx,y:fy,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,life:1});
+    }
+    fireworks.push({sparks, color});
+  }
+  spawnFirework();
+  const fwTimer1 = setTimeout(spawnFirework, 400);
+  const fwTimer2 = setTimeout(spawnFirework, 900);
+  const fwTimer3 = setTimeout(spawnFirework, 1500);
+
+  let frame=0;
+  function tick(){
+    frame++; ctx.clearRect(0,0,W,H);
+    confetti.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    });
+    ribbons.forEach(r=>{
+      r.x+=r.vx; r.y+=r.vy; r.rot+=r.vr; r.wob+=0.08;
+      ctx.save(); ctx.translate(r.x + Math.sin(r.wob)*10, r.y); ctx.rotate(r.rot*Math.PI/180);
+      ctx.strokeStyle=r.color; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,r.len); ctx.stroke();
+      ctx.restore();
+    });
+    fireworks.forEach(fw=>{
+      fw.sparks.forEach(s=>{
+        s.x+=s.vx; s.y+=s.vy; s.vy+=0.04; s.life-=0.012;
+        if(s.life>0){
+          ctx.globalAlpha = Math.max(s.life,0);
+          ctx.fillStyle = fw.color;
+          ctx.beginPath(); ctx.arc(s.x,s.y,2.4,0,Math.PI*2); ctx.fill();
+        }
+      });
+    });
+    ctx.globalAlpha = 1;
+    if(frame<320) requestAnimationFrame(tick); else cv.remove();
+  }
+  tick();
+}
+</script>
+</body>
+</html>
